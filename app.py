@@ -34,12 +34,29 @@ user_input = st.text_area("Analiz edilecek İngilizce yorumu buraya yazın:", he
 
 if st.button("Duyguyu Analiz Et"):
     if user_input.strip() != "":
-        # Tahmin yap
+        # Tahmin olasılıklarını al
         vectorized_text = tfidf.transform([user_input])
-        prediction = model.predict(vectorized_text)[0]
-        confidence = model.predict_proba(vectorized_text).max()
+        probabilities = model.predict_proba(vectorized_text)[0]
         
-        sentiment_label = "Pozitif (1)" if prediction == 1 else "Negatif (0)"
+        prob_neg = probabilities[0] # Negatif olma olasılığı
+        prob_pos = probabilities[1] # Pozitif olma olasılığı
+        
+        # Eşik değeri (Threshold) mantığı ile NÖTR sınıfını oluşturma
+        if 0.35 <= prob_pos <= 0.65:
+            sentiment_label = "Nötr (2)"
+            prediction_val = 2 # Veritabanında Nötr için 2 kodunu kullanıyoruz
+            confidence = max(prob_pos, prob_neg) 
+            st.warning(f"Sonuç: {sentiment_label} | Güven Skoru: %{confidence*100:.1f} (Model Kararsız)")
+        elif prob_pos > 0.60:
+            sentiment_label = "Pozitif (1)"
+            prediction_val = 1
+            confidence = prob_pos
+            st.success(f"Sonuç: {sentiment_label} | Güven Skoru: %{confidence*100:.1f}")
+        else:
+            sentiment_label = "Negatif (0)"
+            prediction_val = 0
+            confidence = prob_neg
+            st.error(f"Sonuç: {sentiment_label} | Güven Skoru: %{confidence*100:.1f}")
         
         # Sonucu veritabanına kaydet
         conn = get_db_connection()
@@ -48,15 +65,10 @@ if st.button("Duyguyu Analiz Et"):
         cursor.execute('''
             INSERT INTO predictions (review_text, predicted_sentiment, confidence_score, timestamp)
             VALUES (?, ?, ?, ?)
-        ''', (user_input, int(prediction), float(confidence), current_time))
+        ''', (user_input, prediction_val, float(confidence), current_time))
         conn.commit()
         conn.close()
         
-        # Sonucu ekranda göster
-        if prediction == 1:
-            st.success(f"Sonuç: {sentiment_label} | Güven Skoru: %{confidence*100:.1f}")
-        else:
-            st.error(f"Sonuç: {sentiment_label} | Güven Skoru: %{confidence*100:.1f}")
     else:
         st.warning("Lütfen analiz için bir metin girin.")
 
