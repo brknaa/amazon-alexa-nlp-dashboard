@@ -5,11 +5,26 @@ import pandas as pd
 import joblib
 import os
 import datetime
+import plotly.express as px 
+
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f5f7f9;
+    }
+    div.stButton > button {
+        background-color: #4CAF50;
+        color: white;
+        font-weight: bold;
+        border-radius: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # --- 1. AYARLAR VE YÜKLEMELER ---
-translator = Translator() # Çeviri nesnesini başlattık
+translator = Translator() 
 st.set_page_config(page_title="NLP Duygu Analizi", layout="wide")
-st.title("Amazon Alexa Yorumları - Duygu Analizi Paneli")
+st.title("Amazon Alexa Yorumları - Duygu Analizi Paneli 🚀")
 
 # Modelleri önbelleğe alarak yükleyen fonksiyon
 @st.cache_resource
@@ -31,7 +46,7 @@ def get_db_connection():
     return sqlite3.connect(db_path)
 
 # --- 2. KULLANICI GİRİŞİ VE TAHMİN BÖLÜMÜ ---
-st.subheader("Yeni Yorum Analizi")
+st.subheader("Yeni Yorum Analizi 📝")
 
 # DİL SEÇİMİNİ BURAYA EKLEDİK
 dil = st.sidebar.selectbox("Giriş Dili:", ["İngilizce", "Türkçe"])
@@ -85,14 +100,23 @@ if st.button("Duyguyu Analiz Et"):
         st.warning("Lütfen analiz için bir metin girin.")
 
 # --- 3. ANALİTİK VE GÖRSELLEŞTİRME BÖLÜMÜ ---
+
+# Analitik Kartları
+conn = get_db_connection()
+df_db = pd.read_sql_query("SELECT * FROM predictions", conn)
+conn.close()
+
+# Nötr eklendi ve sütun 4'e çıkarıldı
+col_a, col_b, col_c, col_d = st.columns(4)
+col_a.metric("Toplam Analiz", len(df_db))
+col_b.metric("Pozitif Yorum", len(df_db[df_db['predicted_sentiment'] == 1]))
+col_c.metric("Negatif Yorum", len(df_db[df_db['predicted_sentiment'] == 0]))
+col_d.metric("Nötr Yorum", len(df_db[df_db['predicted_sentiment'] == 2]))
+
 st.divider()
 st.subheader("Geçmiş Analiz İstatistikleri ve Görselleştirme")
 
 try:
-    conn = get_db_connection()
-    df_db = pd.read_sql_query("SELECT * FROM predictions", conn)
-    conn.close()
-    
     if not df_db.empty:
         col1, col2 = st.columns(2)
         with col1:
@@ -101,7 +125,9 @@ try:
         with col2:
             st.write("**Veritabanındaki Duygu Dağılımı**")
             sentiment_counts = df_db['predicted_sentiment'].value_counts().rename(index={1: 'Pozitif', 0: 'Negatif', 2: 'Nötr'})
-            st.bar_chart(sentiment_counts)
+            # Madde 4: Plotly grafiği
+            fig = px.pie(values=sentiment_counts.values, names=sentiment_counts.index, title="Duygu Dağılımı", hole=0.3)
+            st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Veritabanında henüz kayıt bulunmuyor.")
 except Exception as e:
