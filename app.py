@@ -1,3 +1,4 @@
+from googletrans import Translator
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -6,10 +7,11 @@ import os
 import datetime
 
 # --- 1. AYARLAR VE YÜKLEMELER ---
+translator = Translator() # Çeviri nesnesini başlattık
 st.set_page_config(page_title="NLP Duygu Analizi", layout="wide")
 st.title("Amazon Alexa Yorumları - Duygu Analizi Paneli")
 
-# Modelleri önbelleğe alarak yükleyen fonksiyon (Uygulamayı hızlandırır)
+# Modelleri önbelleğe alarak yükleyen fonksiyon
 @st.cache_resource
 def load_models():
     base_path = os.getcwd()
@@ -20,7 +22,7 @@ def load_models():
 try:
     tfidf, model = load_models()
 except Exception as e:
-    st.error("Modeller bulunamadı! Lütfen Jupyter Notebook'ta modelleri kaydettiğinizden emin olun.")
+    st.error("Modeller bulunamadı!")
     st.stop()
 
 # Veritabanı bağlantı fonksiyonu
@@ -30,24 +32,34 @@ def get_db_connection():
 
 # --- 2. KULLANICI GİRİŞİ VE TAHMİN BÖLÜMÜ ---
 st.subheader("Yeni Yorum Analizi")
-user_input = st.text_area("Analiz edilecek İngilizce yorumu buraya yazın:", height=100)
+
+# DİL SEÇİMİNİ BURAYA EKLEDİK
+dil = st.sidebar.selectbox("Giriş Dili:", ["İngilizce", "Türkçe"])
+user_input = st.text_area("Analiz edilecek yorumu buraya yazın:", height=100)
 
 if st.button("Duyguyu Analiz Et"):
     if user_input.strip() != "":
-        # Tahmin olasılıklarını al
-        vectorized_text = tfidf.transform([user_input])
+        
+        # ÇEVİRİ MANTIĞINI BURAYA EKLEDİK
+        metin = user_input
+        if dil == "Türkçe":
+            metin = translator.translate(user_input, src='tr', dest='en').text
+            st.info(f"Algılanan İngilizce çeviri: {metin}")
+
+        # Tahmin olasılıklarını al (Artık 'metin' değişkenini kullanıyoruz)
+        vectorized_text = tfidf.transform([metin])
         probabilities = model.predict_proba(vectorized_text)[0]
         
-        prob_neg = probabilities[0] # Negatif olma olasılığı
-        prob_pos = probabilities[1] # Pozitif olma olasılığı
+        prob_neg = probabilities[0] 
+        prob_pos = probabilities[1] 
         
-        # Eşik değeri (Threshold) mantığı ile NÖTR sınıfını oluşturma
+        # Eşik değeri mantığı
         if 0.35 <= prob_pos <= 0.65:
             sentiment_label = "Nötr (2)"
-            prediction_val = 2 # Veritabanında Nötr için 2 kodunu kullanıyoruz
+            prediction_val = 2 
             confidence = max(prob_pos, prob_neg) 
             st.warning(f"Sonuç: {sentiment_label} | Güven Skoru: %{confidence*100:.1f} (Model Kararsız)")
-        elif prob_pos > 0.60:
+        elif prob_pos > 0.65: # Eşik tutarlılığı için 0.65'e güncelledim
             sentiment_label = "Pozitif (1)"
             prediction_val = 1
             confidence = prob_pos
@@ -83,16 +95,12 @@ try:
     
     if not df_db.empty:
         col1, col2 = st.columns(2)
-        
         with col1:
             st.write("**Son Tahmin Kayıtları**")
-            # Sadece son 5 kaydı göster ve ID'ye göre ters sırala (en yeni en üstte)
             st.dataframe(df_db[['timestamp', 'review_text', 'predicted_sentiment', 'confidence_score']].tail().sort_index(ascending=False))
-        
         with col2:
             st.write("**Veritabanındaki Duygu Dağılımı**")
-            # 1 ve 0'ları metne çevirip grafiğini çiz
-            sentiment_counts = df_db['predicted_sentiment'].value_counts().rename(index={1: 'Pozitif', 0: 'Negatif'})
+            sentiment_counts = df_db['predicted_sentiment'].value_counts().rename(index={1: 'Pozitif', 0: 'Negatif', 2: 'Nötr'})
             st.bar_chart(sentiment_counts)
     else:
         st.info("Veritabanında henüz kayıt bulunmuyor.")
