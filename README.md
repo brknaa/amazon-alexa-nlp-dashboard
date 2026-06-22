@@ -42,9 +42,17 @@ Arayüz üzerinden yapılan her sorgu, kalıcı analiz ve raporlama için SQLite
 Projeyi yerel ortamınızda ayağa kaldırmak için:
 
 1. Projeyi klonlayın:
-```bash
-   git clone [https://github.com/brknaa/amazon-alexa-nlp-dashboard.git](https://github.com/brknaa/amazon-alexa-nlp-dashboard.git)
-   cd amazon-alexa-nlp-dashboard
+    git clone https://github.com/brknaa/amazon-alexa-nlp-dashboard.git
+    cd amazon-alexa-nlp-dashboard
+
+2. Bağımlılıkları yükleyin:
+    pip install -r requirements.txt
+
+3. Veritabanını sıfırlamak isterseniz (Opsiyonel yardımcı araç):
+    python reset_db.py
+
+4. Gösterge panelini başlatın:
+    streamlit run app.py
 
 ## 🖼️ Gösterge Paneli Ekran Görüntüleri
 
