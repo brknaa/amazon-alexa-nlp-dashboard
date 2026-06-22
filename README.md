@@ -45,3 +45,14 @@ Projeyi yerel ortamınızda ayağa kaldırmak için:
 ```bash
    git clone [https://github.com/brknaa/amazon-alexa-nlp-dashboard.git](https://github.com/brknaa/amazon-alexa-nlp-dashboard.git)
    cd amazon-alexa-nlp-dashboard
+
+## 🖼️ Gösterge Paneli Ekran Görüntüleri
+
+### Genel Arayüz ve Dil Seçimi
+![Genel Arayüz](images/dashboard1.png)
+
+### Duygu Analizi ve Çeviri Sonucu
+![Analiz Sonucu](images/dashboard3.png)
+
+### Veritabanı İstatistikleri ve Plotly Grafikleri
+![İstatistikler](images/dashboard2.png)
