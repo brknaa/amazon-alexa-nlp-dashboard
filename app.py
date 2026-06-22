@@ -58,8 +58,12 @@ if st.button("Duyguyu Analiz Et"):
         # ÇEVİRİ MANTIĞINI BURAYA EKLEDİK
         metin = user_input
         if dil == "Türkçe":
-            metin = translator.translate(user_input, src='tr', dest='en').text
-            st.info(f"Algılanan İngilizce çeviri: {metin}")
+            try:
+                metin = translator.translate(user_input, src='tr', dest='en').text
+                st.info(f"Algılanan İngilizce çeviri: {metin}")
+            except Exception as e:
+                st.error("🌐 Çeviri servisine bağlanılamadı! Lütfen internet bağlantınızı kontrol edin veya yorumu doğrudan İngilizce girin.")
+                st.stop() # Hata alırsak kodu burada durdurur, uygulamanın çökmesini engeller.
 
         # Tahmin olasılıklarını al (Artık 'metin' değişkenini kullanıyoruz)
         vectorized_text = tfidf.transform([metin])
